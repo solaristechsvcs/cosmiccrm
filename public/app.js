@@ -110,7 +110,7 @@ function renderField(key,field,value,label,writable){
     control=(writable?'<div class="ref-search"><input type="search" placeholder="Find '+h(field.table)+'…" data-ref-input="'+key+'" aria-label="Find '+h(key)+'"><button type="button" data-ref-search="'+key+'" data-ref-table="'+field.table+'">Find</button></div>':'')+
     '<select name="'+key+'"'+disabled+'><option value="">Unassigned</option>'+(value?'<option selected value="'+h(value)+'">'+h(name)+'</option>':'')+'</select>'+
     (value&&field.table!=='users'?'<a class="field-link no-print" href="#'+h(field.table)+'" data-related="'+h(value)+'" data-module="'+field.table+'">Open linked record ↗</a>':'');
-  }else if(field.type==='choice')control='<select name="'+key+'"'+required+disabled+'>'+field.options.map(option=>'<option value="'+option+'" '+(value===option?'selected':'')+'>'+h(title(option))+'</option>').join('')+'</select>';
+  }else if(field.type==='choice')control='<select aria-label="'+h(title(key))+'" name="'+key+'"'+required+disabled+'>'+field.options.map(option=>'<option value="'+option+'" '+(value===option?'selected':'')+'>'+h(title(option))+'</option>').join('')+'</select>';
   else if(field.type==='boolean')control='<select name="'+key+'"'+disabled+'><option value="true" '+(value?'selected':'')+'>Active</option><option value="false" '+(!value?'selected':'')+'>Inactive</option></select>';
   else if(field.max>500)control='<textarea name="'+key+'" maxlength="'+field.max+'"'+required+disabled+'>'+h(value)+'</textarea>';
   else {

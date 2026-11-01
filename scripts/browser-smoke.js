@@ -38,7 +38,7 @@ try {
   await page.locator('nav').getByRole('link',{name:'Quotes',exact:true}).click();
   await page.getByRole('button',{name:'Add quote'}).click();
   await dialog.getByLabel('Name *',{exact:true}).fill('Browser QA Quote');
-  await dialog.getByLabel('Status *',{exact:true}).selectOption('accepted');
+  await dialog.getByLabel('Status',{exact:true}).selectOption('accepted');
   await dialog.getByLabel('Tax Rate *',{exact:true}).fill('10');
   await dialog.getByLabel('Item description').fill('Managed services');
   await dialog.getByLabel('Quantity',{exact:true}).fill('2');
