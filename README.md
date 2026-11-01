@@ -129,3 +129,15 @@ Back up MySQL before deploying future schema changes. Preserve `config.js` separ
 ## Initial release validation
 
 Local syntax, unit/security checks and dependency auditing are included. Browser smoke checks run in GitHub Actions against the test database and save desktop/mobile screenshots as workflow artifacts. The GitHub CI result is the source of truth for the MySQL integration run. Live Wisp deployment requires your panel secrets, server allocation and database configuration and is not performed merely by pushing source.
+
+## Repair without a shell
+
+If local edits block updating and you only have Wisp File Manager access:
+
+1. Stop the server.
+2. Open scripts/repair-update.cjs on GitHub, click Raw, and copy its complete contents.
+3. Create a file named repair.cjs in /home/container using Wisp File Manager and paste the contents. Do not overwrite config.js.
+4. Set Wisp Main File / MAIN_FILE to repair.cjs and start the server.
+5. After the console says Repair complete and the CRM starts, change MAIN_FILE back to start.cjs.
+
+The helper saves all tracked local edits (including deleted example files) in a named Git stash and fast-forwards main. It does not include untracked files in the stash. It checks that configuration files are untracked locally and absent from the remote before changing files, and verifies config.js remains byte-identical. It stops for divergent commits, conflicts or tracked secrets. The stash is a backup, not automatically reapplied. Keep repair.cjs as a local untracked file or delete it through File Manager after switching back to start.cjs.
