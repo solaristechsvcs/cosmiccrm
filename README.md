@@ -63,12 +63,12 @@ Health check: `GET /health` returns 200 with `{"ok":true}` when MySQL is reachab
 Every start through `scripts/start.sh`:
 
 1. Reads local configuration and verifies the Git branch and clean tracked files.
-2. Fetches the configured branch (default `main`) and merges **fast-forward only**.
+2. Fetches the configured branch (default `main`) and merges **fast-forward only**. If Wisp changed only `package-lock.json`, it first preserves that change in a named Git stash and uses the repository lockfile.
 3. Refuses a remote commit that tracks `config.js` or `deploy.config.js`.
 4. Runs `npm ci`, JavaScript syntax checks and unit tests.
 5. Applies pending, lock-protected database migrations, then starts `server.js`.
 
-`config.js` is ignored by Git and remains on the server. The database is external and survives restarts. Source updates stop on dirty tracked files, divergent history, failed fetches, failed checks or failed migrations. There is no forced reset, file cleanup or automatic database rollback. Set `update.enabled: false` to run a pinned checkout without fetching (Git is then unnecessary). Future schema changes must use a new migration version; do not edit already-applied migrations.
+`config.js` is ignored by Git and remains on the server. The database is external and survives restarts. Source updates stop on local source edits (listing the affected files), divergent history, failed fetches, failed checks or failed migrations. Ordinary changes to only `package-lock.json` are backed up automatically in Git stash; the backup SHA is printed to the console. Inspect it with `git stash show -p BACKUP_SHA`. These lockfile backups are not reapplied automatically. There is no forced reset, file cleanup or automatic database rollback. Set `update.enabled: false` to run a pinned checkout without fetching (Git is then unnecessary). Future schema changes must use a new migration version; do not edit already-applied migrations.
 
 ## Automatically restart Wisp after changes
 
