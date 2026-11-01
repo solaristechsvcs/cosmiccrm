@@ -22,7 +22,7 @@ async function showWorkspace(){
   $('#user-name').textContent=state.user.name;
   $('#avatar').textContent=state.user.name.split(' ').map(part=>part[0]).slice(0,2).join('').toUpperCase();
   state.meta=await api('/meta');
-  $('#nav').innerHTML=nav.filter(([key])=>key!=='team'||state.user.role==='admin').filter(([key])=>key!=='audit'||['admin','manager'].includes(state.user.role)).map(([key,icon,label])=>'<a href="#'+key+'" data-nav="'+key+'"><span class="nav-icon">'+icon+'</span>'+label+'</a>').join('');
+  $('#nav').innerHTML=nav.filter(([key])=>key!=='team'||state.user.role==='admin').filter(([key])=>key!=='audit'||['admin','manager'].includes(state.user.role)).map(([key,icon,label])=>'<a href="#'+key+'" data-nav="'+key+'"><span class="nav-icon" aria-hidden="true">'+icon+'</span>'+label+'</a>').join('');
   await route();
 }
 async function route(){
