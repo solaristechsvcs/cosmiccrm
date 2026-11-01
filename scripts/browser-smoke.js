@@ -53,11 +53,13 @@ try {
   await page.locator('nav').getByRole('link',{name:'Overview',exact:true}).click();
   await page.getByRole('heading',{name:'Welcome back, Browser.'}).waitFor();
   await page.setViewportSize({width:390,height:844});
+  await page.waitForFunction(()=>document.querySelector('#sidebar').getBoundingClientRect().right<=1);
   await page.screenshot({path:'test-results/dashboard-mobile.png',fullPage:true});
   assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth),'Mobile dashboard should not overflow horizontally.');
   await page.getByRole('button',{name:'Toggle navigation'}).click();
   await page.locator('nav').getByRole('link',{name:'Contacts',exact:true}).click();
   await page.getByRole('button',{name:'Add contact'}).waitFor();
+  await page.waitForFunction(()=>document.querySelector('#sidebar').getBoundingClientRect().right<=1);
   await page.screenshot({path:'test-results/contacts-mobile.png',fullPage:true});
   assert.deepEqual(errors,[]);
   console.log('Browser smoke passed: sign in, company creation, notes, quote → invoice, totals, desktop/mobile navigation.');
