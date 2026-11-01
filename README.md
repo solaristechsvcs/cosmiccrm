@@ -14,7 +14,7 @@ A self-hosted CRM for Solaris: Node.js 24, external MySQL 8, a local `config.js`
 - Accepted quotes convert into draft invoices without creating duplicates on repeat requests.
 - Financial reporting grouped by currency and status; CSV exports for managers and administrators.
 - Search, status filters, pagination and record notes.
-- Administrator-managed staff accounts, password changes, session revocation, five staff roles.
+- Administrator-managed staff accounts, password changes, session revocation, six staff roles.
 - Persistent MySQL sessions, password hashing, CSRF protection, HTTP security headers, rate limits, input validation, transactional audit records, and concurrent-edit protection.
 - Versioned migrations, restart-time Git updates, and optional GitHub Actions → Wisp automatic restarts.
 
@@ -41,7 +41,7 @@ Use a Node.js 24 egg/image with **Git and Bash installed**. The repository must 
    - For Cloudflare Tunnel HTTPS, use `secureCookies: true` and set `trustProxy` to your proxy hop count (normally 1 for a direct tunnel). Route the tunnel to this server's allocated address and port.
    - For direct HTTP testing only, use `secureCookies: false`, the matching HTTP `publicUrl`, and `trustProxy: false`.
    - Set your business currency before entering deals/products. Quotes and invoices have their own currency.
-3. Install dependencies and create the first administrator, using an interactive terminal in the server directory:
+3. Recommended for Wisp: use the [first-owner configuration setup](#create-your-first-owner-account-using-wisp) below, which needs only File Manager and Restart. The interactive administrator setup remains available as an alternative for operators who have a shell:
    ```bash
    npm ci --ignore-scripts
    npm run setup
@@ -93,7 +93,8 @@ If you do not enable this workflow, manually restarting Wisp still pulls updates
 
 | Role | Read CRM | Write records | Delete records / CSV export | Audit | Staff administration |
 | --- | --- | --- | --- | --- | --- |
-| Admin | All | All | Yes | Yes | Yes |
+| Owner | All | All | Yes | Yes | Yes, including owners |
+| Admin | All | All | Yes | Yes | Other staff only |
 | Manager | All | All | Yes | Yes | No |
 | Sales | All | Companies, contacts, leads, deals, tasks, quotes, invoices | No | No | No |
 | Support | All | Contacts, tasks, tickets | No | No | No |
@@ -141,3 +142,27 @@ If local edits block updating and you only have Wisp File Manager access:
 5. After the console says Repair complete and the CRM starts, change MAIN_FILE back to start.cjs.
 
 The helper saves all tracked local edits (including deleted example files) in a named Git stash and fast-forwards main. It does not include untracked files in the stash. It checks that configuration files are untracked locally and absent from the remote before changing files, and verifies config.js remains byte-identical. It stops for divergent commits, conflicts or tracked secrets. The stash is a backup, not automatically reapplied. Keep repair.cjs as a local untracked file or delete it through File Manager after switching back to start.cjs.
+
+## Create your first owner account using Wisp
+
+No SSH, terminal, or Main File change is required.
+
+1. Install the latest update by restarting Wisp with Main File set to `start.cjs`.
+2. Stop the server. In **Wisp File Manager**, edit `config.js` and add this property inside `export default { ... }`:
+
+   ```js
+   ownerSetup: {
+     enabled: true,
+     name: 'Your Name',
+     email: 'you@example.com',
+     password: 'CHOOSE_A_UNIQUE_PASSWORD_12_OR_MORE_CHARACTERS'
+   },
+   ```
+
+3. Save and start the server. After migrations, it creates the first owner automatically. The console displays **Owner account ready**.
+4. Sign in on your CRM website with that email and password.
+5. Remove the `ownerSetup` block from `config.js`, or set `enabled: false` and clear `password`. Save the file; future restarts keep the owner account.
+
+If the email already belongs to a staff account and no owner exists, this setup promotes that account to owner, activates it, changes its name and password to the configured values, and revokes its old sessions. Once any owner exists, setup is skipped and does not reset passwords or create more owners. First-owner creation is serialized and recorded in the audit trail. Credentials are never printed or served through the API.
+
+Owners have full access, including **Team → Add owner** and the ability to assign the Owner role. Admins can manage other staff but cannot create, promote, disable, change the password of, or otherwise edit an owner account. An account cannot disable or change its own privileged role, and the last active owner is protected. To add another owner after setup, sign in as an owner and use Team.

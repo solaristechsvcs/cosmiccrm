@@ -1,4 +1,5 @@
 import session from 'express-session';
+import {setupOwner} from './src/owner-setup.js';
 import MySQLSession from 'express-mysql-session';
 import { loadConfig } from './src/config.js';
 import { createPool, migrate } from './src/db.js';
@@ -6,6 +7,9 @@ import { createApp } from './src/app.js';
 const config=await loadConfig();
 const pool=createPool(config);
 await migrate(pool);
+const ownerSetup=await setupOwner(pool,config);
+if(ownerSetup.created)console.log('Owner account ready. Sign in with your configured owner email and password. Remove ownerSetup credentials from config.js now.');
+else if(ownerSetup.reason==='exists')console.log('An owner already exists. Setup skipped; remove ownerSetup credentials from config.js.');
 const MySQLStore=MySQLSession(session);
 const store=new MySQLStore({createDatabaseTable:true,expiration:8*60*60*1000},pool);
 await store.onReady();

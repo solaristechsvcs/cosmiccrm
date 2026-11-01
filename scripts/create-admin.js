@@ -10,7 +10,7 @@ const output=new Writable({write(chunk,encoding,callback){if(!muted)process.stdo
 const rl=createInterface({input:process.stdin,output,terminal:!!process.stdin.isTTY});
 try {
   await migrate(pool);
-  const [[count]]=await pool.query("SELECT COUNT(*) total FROM users WHERE role='admin' AND active=1");
+  const [[count]]=await pool.query("SELECT COUNT(*) total FROM users WHERE role IN ('owner','admin') AND active=1");
   if(count.total)throw new Error('An administrator already exists. Use Team management to create staff or change passwords.');
   const name=(await rl.question('Administrator name: ')).trim();
   const email=(await rl.question('Administrator email: ')).trim().toLowerCase();
@@ -25,7 +25,7 @@ try {
     if(lock.acquired!==1)throw new Error('Another administrator setup is running.');
     try {
       await db.beginTransaction();
-      const [[existing]]=await db.query("SELECT COUNT(*) total FROM users WHERE role='admin' AND active=1");
+      const [[existing]]=await db.query("SELECT COUNT(*) total FROM users WHERE role IN ('owner','admin') AND active=1");
       if(existing.total)throw new Error('An administrator already exists.');
       const [result]=await db.execute("INSERT INTO users (name,email,role,password_hash) VALUES (?,?,'admin',?)",[name,email,hash]);
       await audit(db,result.insertId,'created','users',result.insertId,{bootstrap:true});

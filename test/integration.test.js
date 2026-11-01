@@ -4,7 +4,8 @@ import session from 'express-session';
 import MySQLSession from 'express-mysql-session';
 import { createPool,migrate } from '../src/db.js';
 import { createApp } from '../src/app.js';
-import { hashPassword } from '../src/security.js';
+import { hashPassword,verifyPassword } from '../src/security.js';
+import {setupOwner} from '../src/owner-setup.js';
 test('MySQL integration: migrations, sessions, permissions, records, quotes and conversions',{skip:process.env.CRM_TEST_MYSQL!=='1'},async t=>{
   const config={database:{host:'127.0.0.1',port:Number(process.env.CRM_TEST_DB_PORT||3306),user:'root',password:process.env.CRM_TEST_DB_PASSWORD||'test-only',database:'cosmiccrm_test'},sessionSecret:'integration-only-secret-'.repeat(4),secureCookies:false,trustProxy:false,publicUrl:'http://127.0.0.1',currency:'USD'};
   const pool=createPool(config);let server,store;
@@ -58,6 +59,41 @@ test('MySQL integration: migrations, sessions, permissions, records, quotes and 
     assert.equal((await request('/records/contacts/'+contact.data.id)).status,404);
     const [[count]]=await pool.query('SELECT COUNT(*) count FROM audit_log');assert.ok(count.count>=10);
     await request('/logout',{method:'POST',body:{}});assert.equal((await request('/dashboard')).status,401);
+
+    // Wisp-only configuration creates the first owner without a terminal or public setup URL.
+    assert.equal((await setupOwner(pool,{})).reason,'disabled');
+    await assert.rejects(setupOwner(pool,{ownerSetup:{enabled:true,name:'Owner',email:'owner@test.example',password:'short'}}));
+    const ownerConfig={ownerSetup:{enabled:true,name:'First Owner',email:'first-owner@test.example',password:'Owner setup password 123'}};
+    const bootstraps=await Promise.all([setupOwner(pool,ownerConfig),setupOwner(pool,ownerConfig)]);
+    assert.equal(bootstraps.filter(result=>result.created).length,1);
+    const firstOwner=bootstraps.find(result=>result.created);
+    const [[firstAccount]]=await pool.execute('SELECT * FROM users WHERE id=?',[firstOwner.id]);
+    assert.equal(firstAccount.role,'owner');assert.ok(await verifyPassword(ownerConfig.ownerSetup.password,firstAccount.password_hash));
+    assert.equal((await setupOwner(pool,{ownerSetup:{enabled:true}})).reason,'exists');
+    // Exercise promotion as a separate first-owner scenario in the disposable database.
+    await pool.execute('DELETE FROM users WHERE id=?',[firstOwner.id]);
+    const promotion=await setupOwner(pool,{ownerSetup:{enabled:true,name:'Workspace Owner',email:'admin@test.example',password:'New owner password 123'}});
+    assert.equal(promotion.promoted,true);assert.equal(promotion.id,admin.insertId);
+    await request('/auth');
+    assert.equal((await request('/login',{method:'POST',body:{email:'admin@test.example',password:'New owner password 123'}})).status,200);
+    assert.equal((await request('/auth')).data.user.role,'owner');
+    assert.ok((await request('/meta')).data.roles.includes('owner'));
+    assert.equal((await request('/users')).status,200);
+    const secondOwner=await request('/users',{method:'POST',body:{name:'Second Owner',email:'second-owner@test.example',role:'owner',active:true,password:'Second owner password 123'}});
+    assert.equal(secondOwner.status,201);
+    const newAdmin=await request('/users',{method:'POST',body:{name:'Staff Admin',email:'staff-admin@test.example',role:'admin',active:true,password:'Staff admin password 123'}});
+    assert.equal(newAdmin.status,201);
+    const staff=client();await staff('/auth');await staff('/login',{method:'POST',body:{email:'staff-admin@test.example',password:'Staff admin password 123'}});
+    assert.equal((await staff('/meta')).data.roles.includes('owner'),false);
+    assert.equal((await staff('/users',{method:'POST',body:{name:'Escalation',email:'escalation@test.example',role:'owner',active:true,password:'Escalation password 123'}})).status,403);
+    assert.equal((await staff('/users/'+promotion.id,{method:'PUT',body:{name:'Tampered',email:'admin@test.example',role:'admin',active:true}})).status,403);
+    assert.equal((await request('/users/'+promotion.id,{method:'PUT',body:{name:'Owner',email:'admin@test.example',role:'admin',active:true}})).status,400);
+    assert.equal((await request('/users/'+secondOwner.data.id,{method:'PUT',body:{name:'Second Owner',email:'second-owner@test.example',role:'owner',active:false}})).status,200);
+    const [[preserved]]=await pool.execute('SELECT password_hash FROM users WHERE id=?',[promotion.id]);
+    assert.equal((await setupOwner(pool,ownerConfig)).created,false);
+    const [[afterSetup]]=await pool.execute('SELECT password_hash FROM users WHERE id=?',[promotion.id]);
+    assert.equal(afterSetup.password_hash,preserved.password_hash);
+
   } finally {
     if(server)await new Promise(resolve=>server.close(resolve));
     if(store)await store.close();

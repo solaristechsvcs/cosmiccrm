@@ -13,9 +13,9 @@ export async function verifyPassword(password, hash) {
   const candidate = await scrypt(password, salt, 64);
   return timingSafeEqual(Buffer.from(stored, 'hex'), candidate);
 }
-export const roles = ['admin', 'manager', 'sales', 'support', 'viewer'];
+export const roles = ['owner', 'admin', 'manager', 'sales', 'support', 'viewer'];
 export function canWrite(role, module) {
-  if (role === 'admin' || role === 'manager') return true;
+  if (role === 'owner' || role === 'admin' || role === 'manager') return true;
   if (role === 'sales') return ['companies', 'contacts', 'leads', 'deals', 'tasks', 'quotes', 'invoices'].includes(module);
   if (role === 'support') return ['contacts', 'tasks', 'tickets'].includes(module);
   return false;

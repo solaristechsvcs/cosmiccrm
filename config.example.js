@@ -4,5 +4,7 @@ export default {
   publicUrl: 'https://crm.example.com', trustProxy: 1, secureCookies: true,
   sessionSecret: 'REPLACE_WITH_AT_LEAST_48_RANDOM_CHARACTERS',
   database: { host: 'mysql.example.com', port: 3306, user: 'cosmiccrm', password: '', database: 'cosmiccrm', connectionLimit: 10 },
+  // Optional first-owner setup: fill these details, enable once, then remove the password after creation.
+  ownerSetup: { enabled: false, name: '', email: '', password: '' },
   currency: 'USD', update: { enabled: true, branch: 'main' }
 };

@@ -11,7 +11,7 @@ const pool=createPool(config);let server,browser;
 try {
   await migrate(pool);
   const hash=await hashPassword('Browser smoke password 123');
-  await pool.execute("INSERT INTO users(name,email,role,password_hash) VALUES ('Browser Admin','browser@test.example','admin',?) ON DUPLICATE KEY UPDATE password_hash=VALUES(password_hash),active=1,role='admin'",[hash]);
+  await pool.execute("INSERT INTO users(name,email,role,password_hash) VALUES ('Browser Admin','browser@test.example','owner',?) ON DUPLICATE KEY UPDATE password_hash=VALUES(password_hash),active=1,role='owner'",[hash]);
   server=createApp({pool,config}).listen(0,'127.0.0.1');await new Promise(resolve=>server.on('listening',resolve));
   config.publicUrl='http://127.0.0.1:'+server.address().port;
   browser=await chromium.launch();
@@ -61,8 +61,19 @@ try {
   await page.getByRole('button',{name:'Add contact'}).waitFor();
   await page.waitForFunction(()=>document.querySelector('#sidebar').getBoundingClientRect().right<=1);
   await page.screenshot({path:'test-results/contacts-mobile.png',fullPage:true});
+  await page.setViewportSize({width:1440,height:1080});
+  await page.locator('nav').getByRole('link',{name:'Team',exact:true}).click();
+  await page.getByRole('button',{name:'Add owner'}).click();
+  await dialog.getByRole('heading',{name:'Create owner account',exact:true}).waitFor();
+  assert.equal(await dialog.locator('select[name=role]').inputValue(),'owner');
+  await dialog.getByLabel('Name',{exact:true}).fill('Browser QA Owner');
+  await dialog.getByLabel('Email',{exact:true}).fill('browser-qa-owner@test.example');
+  await dialog.getByLabel('Password',{exact:true}).fill('Browser QA owner password 123');
+  await dialog.getByRole('button',{name:'Save account',exact:true}).click();
+  await page.getByRole('cell',{name:'Browser QA Owner',exact:true}).waitFor();
+  await page.screenshot({path:'test-results/owner-team-desktop.png',fullPage:true});
   assert.deepEqual(errors,[]);
-  console.log('Browser smoke passed: sign in, company creation, notes, quote → invoice, totals, desktop/mobile navigation.');
+  console.log('Browser smoke passed: owner sign in, company creation, notes, quote → invoice, totals, desktop/mobile navigation and owner account creation.');
 } finally {
   if(browser)await browser.close();
   if(server)await new Promise(resolve=>server.close(resolve));

@@ -1,4 +1,5 @@
 import express from 'express';
+import {isAccountAdmin,assertAssignableRole,assertAccountChange} from './accounts.js';
 import session from 'express-session';
 import helmet from 'helmet';
 import { rateLimit } from 'express-rate-limit';
@@ -71,7 +72,7 @@ export function createApp({pool,config,store}) {
     if(!user?.active || user.session_version!==req.session.version) throw invalid('Your session has expired. Please sign in.',401);
     req.user=user; next();
   });
-  app.get('/api/meta',(req,res)=>res.json({modules,roles,writable:Object.keys(modules).filter(module=>canWrite(req.user.role,module))}));
+  app.get('/api/meta',(req,res)=>res.json({modules,roles:roles.filter(role=>role!=='owner'||req.user.role==='owner'),writable:Object.keys(modules).filter(module=>canWrite(req.user.role,module))}));
   app.post('/api/password',async(req,res)=>{
     if(!await verifyPassword(req.body.current,req.user.password_hash)) throw invalid('Current password is incorrect.');
     const hash=await hashPassword(req.body.password);
@@ -99,35 +100,37 @@ export function createApp({pool,config,store}) {
     res.json({counts,pipeline,invoices,tasks,activity});
   });
   app.get('/api/audit',async(req,res)=>{
-    if(!['admin','manager'].includes(req.user.role)) throw invalid('Access denied.',403);
+    if(!['owner','admin','manager'].includes(req.user.role)) throw invalid('Access denied.',403);
     const page=Math.max(1,Math.min(100000,parseInt(req.query.page)||1));
     const [rows]=await pool.query('SELECT a.*,u.name actor_name FROM audit_log a LEFT JOIN users u ON u.id=a.actor_id ORDER BY a.id DESC LIMIT 50 OFFSET '+((page-1)*50));
     res.json({rows,page});
   });
   app.get('/api/users',async(req,res)=>{
-    if(req.user.role!=='admin') throw invalid('Administrator access required.',403);
+    if(!isAccountAdmin(req.user.role)) throw invalid('Owner or administrator access required.',403);
     const [users]=await pool.query('SELECT id,name,email,role,active,created_at FROM users ORDER BY name'); res.json(users);
   });
   app.post('/api/users',async(req,res)=>{
-    if(req.user.role!=='admin') throw invalid('Administrator access required.',403);
-    const data=validateUser(req.body), hash=await hashPassword(req.body.password);
+    if(!isAccountAdmin(req.user.role)) throw invalid('Owner or administrator access required.',403);
+    const data=validateUser(req.body);
+    assertAssignableRole(req.user,data.role);
+    const hash=await hashPassword(req.body.password);
     const id=await transaction(pool,async db=>{
       const [result]=await db.execute('INSERT INTO users (name,email,role,active,password_hash) VALUES (?,?,?,?,?)',[data.name,data.email,data.role,data.active,hash]);
       await audit(db,req.user.id,'created','users',result.insertId,{name:data.name,role:data.role}); return result.insertId;
     }); res.status(201).json({id});
   });
   app.put('/api/users/:id',async(req,res)=>{
-    if(req.user.role!=='admin') throw invalid('Administrator access required.',403);
+    if(!isAccountAdmin(req.user.role)) throw invalid('Owner or administrator access required.',403);
     const id=Number(req.params.id); if(!validId(id)) throw invalid('Invalid user.');
     const data=validateUser(req.body);
-    if(id===req.user.id && (!data.active || data.role!=='admin')) throw invalid('You cannot disable or demote your own account.');
+    assertAssignableRole(req.user,data.role);
     const hash=req.body.password?await hashPassword(req.body.password):null;
     await transaction(pool,async db=>{
-      // Serialize administrative changes to protect the last active administrator.
-      const [admins]=await db.query("SELECT id FROM users WHERE role='admin' AND active=1 FOR UPDATE");
+      // Serialize changes to protect owner accounts and the last privileged account.
+      const [privileged]=await db.query("SELECT id,role,active FROM users WHERE role IN ('owner','admin') FOR UPDATE");
       const [[existing]]=await db.execute('SELECT * FROM users WHERE id=? FOR UPDATE',[id]);
       if(!existing) throw invalid('User not found.',404);
-      if(existing.role==='admin' && existing.active && admins.length<=1 && (!data.active||data.role!=='admin')) throw invalid('Keep at least one active administrator.');
+      assertAccountChange(req.user,existing,data,privileged);
       await db.execute('UPDATE users SET name=?,email=?,role=?,active=?,password_hash=?,session_version=session_version+1 WHERE id=?',[data.name,data.email,data.role,data.active,hash||existing.password_hash,id]);
       await audit(db,req.user.id,'updated','users',id,{role:data.role,active:data.active});
     });
@@ -149,7 +152,7 @@ export function createApp({pool,config,store}) {
     res.json({rows,total,page,pages:Math.ceil(total/25)});
   });
   app.get('/api/export/:module',async(req,res)=>{
-    if(!['admin','manager'].includes(req.user.role)) throw invalid('Only administrators and managers can export records.',403);
+    if(!['owner','admin','manager'].includes(req.user.role)) throw invalid('Only owners, administrators and managers can export records.',403);
     const {where,params}=filter(req);
     const [[{total}]]=await pool.execute('SELECT COUNT(*) total FROM '+req.module+where,params);
     if(total>10000) throw invalid('Export is limited to 10,000 records. Narrow your search or filters.');
@@ -194,7 +197,7 @@ export function createApp({pool,config,store}) {
     }); res.json({ok:true});
   });
   app.delete('/api/records/:module/:id',async(req,res)=>{
-    if(!['admin','manager'].includes(req.user.role)) throw invalid('Only administrators and managers can delete records.',403);
+    if(!['owner','admin','manager'].includes(req.user.role)) throw invalid('Only owners, administrators and managers can delete records.',403);
     await transaction(pool,async db=>{
       await lockedRecord(db,req);
       await db.execute('DELETE FROM notes WHERE entity_type=? AND entity_id=?',[req.module,req.params.id]);
