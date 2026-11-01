@@ -11,13 +11,14 @@
     "setup": "node scripts/create-admin.js",
     "migrate": "node scripts/migrate.js",
     "test": "node --test",
-    "check": "node scripts/check.js"
+    "check": "node scripts/check.js",
+    "test:browser": "node scripts/browser-smoke.js"
   },
   "dependencies": {
     "express": "^5.1.0",
-    "express-session": "^1.18.2",
     "express-mysql-session": "^3.0.3",
     "express-rate-limit": "^8.1.0",
+    "express-session": "^1.18.2",
     "helmet": "^8.1.0",
     "mysql2": "^3.24.6"
   },
@@ -25,5 +26,8 @@
     "express-mysql-session": {
       "mysql2": "$mysql2"
     }
+  },
+  "devDependencies": {
+    "playwright": "^1.64.1"
   }
 }

@@ -4,3 +4,4 @@ deploy.config.js
 *.log
 coverage/
 .update-lock/
+test-results/
