@@ -3,7 +3,7 @@ import { Writable } from 'node:stream';
 import { loadConfig } from '../src/config.js';
 import { createPool, migrate } from '../src/db.js';
 import { hashPassword } from '../src/security.js';
-import { transaction, audit } from '../src/app.js';
+import { audit } from '../src/app.js';
 const pool=createPool(await loadConfig());
 let muted=false;
 const output=new Writable({write(chunk,encoding,callback){if(!muted)process.stdout.write(chunk);callback();}});
@@ -18,16 +18,19 @@ try {
   const password=await rl.question('');process.stdout.write('\n');
   const hash=await hashPassword(password);muted=false;
   if(!name||name.length>120||email.length>254||!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))throw new Error('Provide a valid name and email.');
-  await transaction(pool,async db=>{
+  const db=await pool.getConnection();
+  try {
     // Use a database lock to prevent simultaneous bootstrap administrators.
     const [[lock]]=await db.query("SELECT GET_LOCK('cosmiccrm_admin_setup',30) acquired");
     if(lock.acquired!==1)throw new Error('Another administrator setup is running.');
     try {
+      await db.beginTransaction();
       const [[existing]]=await db.query("SELECT COUNT(*) total FROM users WHERE role='admin' AND active=1");
       if(existing.total)throw new Error('An administrator already exists.');
       const [result]=await db.execute("INSERT INTO users (name,email,role,password_hash) VALUES (?,?,'admin',?)",[name,email,hash]);
       await audit(db,result.insertId,'created','users',result.insertId,{bootstrap:true});
-    }finally{await db.query("SELECT RELEASE_LOCK('cosmiccrm_admin_setup')");}
-  });
+      await db.commit();
+    }catch(error){await db.rollback();throw error;}finally{await db.query("SELECT RELEASE_LOCK('cosmiccrm_admin_setup')");}
+  }finally{db.release();}
   console.log('Administrator created. Sign in and manage staff from Team.');
 } finally {rl.close();await pool.end();}

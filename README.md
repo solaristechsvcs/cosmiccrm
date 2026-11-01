@@ -128,4 +128,4 @@ Back up MySQL before deploying future schema changes. Preserve `config.js` separ
 
 ## Initial release validation
 
-Local syntax, unit/security checks and dependency auditing are included. The GitHub CI result is the source of truth for the MySQL integration run. Live Wisp deployment requires your panel secrets, server allocation and database configuration and is not performed merely by pushing source.
+Local syntax, unit/security checks and dependency auditing are included. Browser smoke checks run in GitHub Actions against the test database and save desktop/mobile screenshots as workflow artifacts. The GitHub CI result is the source of truth for the MySQL integration run. Live Wisp deployment requires your panel secrets, server allocation and database configuration and is not performed merely by pushing source.

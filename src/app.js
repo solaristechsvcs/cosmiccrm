@@ -234,7 +234,7 @@ export function createApp({pool,config,store}) {
       const [[quote]]=await db.execute('SELECT * FROM quotes WHERE id=? FOR UPDATE',[req.params.id]);
       if(!quote) throw invalid('Quote not found.',404);
       if(quote.status!=='accepted') throw invalid('Accept the quote before creating an invoice.');
-      const [[already]]=await db.execute("SELECT entity_id FROM audit_log WHERE action='invoice_from_quote' AND entity_type='invoices' AND JSON_EXTRACT(details,'$.quote_id')=? LIMIT 1",[Number(quote.id)]);
+      const [[already]]=await db.execute("SELECT a.entity_id FROM audit_log a INNER JOIN invoices i ON i.id=a.entity_id WHERE a.action='invoice_from_quote' AND a.entity_type='invoices' AND JSON_EXTRACT(a.details,'$.quote_id')=? LIMIT 1",[Number(quote.id)]);
       if(already) return already.entity_id;
       const [invoice]=await db.execute("INSERT INTO invoices (name,company_id,contact_id,status,due_date,currency,tax_rate,items,notes,owner_id,subtotal,total) VALUES (?,?,?,'draft',?,?,?,?,?,?,?,?)",[quote.name,quote.company_id,quote.contact_id,quote.due_date,quote.currency,quote.tax_rate,typeof quote.items==='string'?quote.items:JSON.stringify(quote.items),quote.notes,quote.owner_id,quote.subtotal,quote.total]);
       await audit(db,req.user.id,'invoice_from_quote','invoices',invoice.insertId,{quote_id:quote.id}); return invoice.insertId;

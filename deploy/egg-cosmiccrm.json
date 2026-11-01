@@ -12,9 +12,7 @@
   "docker_images": {
     "Node.js 24": "ghcr.io/parkervcp/yolks:nodejs_24"
   },
-  "file_denylist": [
-    "config.js"
-  ],
+  "file_denylist": [],
   "startup": "bash /home/container/scripts/start.sh",
   "config": {
     "files": "{}",
