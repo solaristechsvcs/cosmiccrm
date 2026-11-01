@@ -1,0 +1,55 @@
+name: Test and deploy CosmicCRM
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: cosmiccrm-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:8.4
+        env:
+          MYSQL_ROOT_PASSWORD: test-only
+          MYSQL_DATABASE: cosmiccrm_test
+        ports: ['3306:3306']
+        options: >-
+          --health-cmd="mysqladmin ping -ptest-only"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - run: npm run check
+      - run: npm audit --omit=dev --audit-level=moderate
+      - run: npm test
+        env:
+          CRM_TEST_MYSQL: '1'
+          CRM_TEST_DB_PASSWORD: test-only
+  deploy:
+    needs: test
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request' && vars.WISP_AUTO_DEPLOY == 'true'
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Request Wisp restart
+        run: node scripts/restart-wisp.js
+        env:
+          WISP_PANEL_URL: ${{ secrets.WISP_PANEL_URL }}
+          WISP_SERVER_ID: ${{ secrets.WISP_SERVER_ID }}
+          WISP_API_KEY: ${{ secrets.WISP_API_KEY }}

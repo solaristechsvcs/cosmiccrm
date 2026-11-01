@@ -1,0 +1,29 @@
+{
+  "name": "cosmiccrm",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "start": "node server.js",
+    "setup": "node scripts/create-admin.js",
+    "migrate": "node scripts/migrate.js",
+    "test": "node --test",
+    "check": "node scripts/check.js"
+  },
+  "dependencies": {
+    "express": "^5.1.0",
+    "express-session": "^1.18.2",
+    "express-mysql-session": "^3.0.3",
+    "express-rate-limit": "^8.1.0",
+    "helmet": "^8.1.0",
+    "mysql2": "^3.24.6"
+  },
+  "overrides": {
+    "express-mysql-session": {
+      "mysql2": "$mysql2"
+    }
+  }
+}

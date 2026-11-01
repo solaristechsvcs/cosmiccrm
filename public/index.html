@@ -1,0 +1,11 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#11101d"><title>CosmicCRM</title><link rel="stylesheet" href="/style.css"><script defer src="/app.js"></script></head>
+<body>
+<div id="toast" role="status" aria-live="polite" hidden></div>
+<section id="login" class="login-screen" hidden><form id="login-form" class="login-card"><div class="brand-mark">✦</div><p class="eyebrow">SOLARIS WORKSPACE</p><h1>Your relationships.<br>Your next opportunity.</h1><p class="muted">Welcome to CosmicCRM. Sign in to your workspace.</p><label>Email address<input name="email" type="email" autocomplete="username" required></label><label>Password<input name="password" type="password" autocomplete="current-password" required></label><button type="submit" class="primary">Sign in <span>↗</span></button><p id="login-error" class="error" role="alert"></p><p class="fine">A clearer view of your business.</p></form></section>
+<div id="workspace" hidden>
+<aside id="sidebar"><a class="brand" href="#dashboard"><span class="brand-mark small">✦</span><span>Cosmic<span class="brand-light">CRM</span></span></a><p class="nav-label">WORKSPACE</p><nav id="nav" aria-label="Main navigation"></nav><div class="sidebar-foot"><div class="orbit">✧</div><strong>Space to grow.</strong><p>Every relationship starts<br>with a conversation.</p><button id="logout" class="subtle">Sign out ↗</button></div></aside>
+<div class="shell"><header><button id="menu" aria-label="Toggle navigation" class="icon-button">☰</button><div class="breadcrumb">Workspace <span>/</span> <strong id="crumb">Overview</strong></div><div class="header-user"><span id="user-name"></span><span class="avatar" id="avatar"></span></div></header>
+<main id="main" tabindex="-1"><div class="loading">Loading your workspace…</div></main><footer>CosmicCRM <span>Connected relationships. Clearer decisions.</span></footer></div></div>
+<dialog id="record-dialog"><div id="dialog-content"></div></dialog>
+</body></html>

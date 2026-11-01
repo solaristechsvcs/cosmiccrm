@@ -1,0 +1,6 @@
+node_modules/
+config.js
+deploy.config.js
+*.log
+coverage/
+.update-lock/

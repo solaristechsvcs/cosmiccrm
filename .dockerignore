@@ -1,0 +1,4 @@
+node_modules
+config.js
+deploy.config.js
+.git

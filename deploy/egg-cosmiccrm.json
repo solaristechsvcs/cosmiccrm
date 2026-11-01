@@ -1,0 +1,33 @@
+{
+  "_comment": "CosmicCRM runtime. Install the git checkout and config.js before starting.",
+  "meta": {
+    "version": "PTDL_v2",
+    "update_url": null
+  },
+  "exported_at": "2026-11-01T00:00:00+00:00",
+  "name": "CosmicCRM",
+  "author": "support@solaristechsvcs.com",
+  "description": "Node.js CRM with external MySQL, config.js, automatic Git updates and migrations.",
+  "features": null,
+  "docker_images": {
+    "Node.js 24": "ghcr.io/parkervcp/yolks:nodejs_24"
+  },
+  "file_denylist": [
+    "config.js"
+  ],
+  "startup": "bash /home/container/scripts/start.sh",
+  "config": {
+    "files": "{}",
+    "startup": "{\"done\":\"CosmicCRM listening on\"}",
+    "logs": "{}",
+    "stop": "^C"
+  },
+  "scripts": {
+    "installation": {
+      "script": "#!/bin/bash\nmkdir -p /mnt/server\necho 'Install the CosmicCRM git checkout and create config.js before starting.'",
+      "container": "debian:bookworm-slim",
+      "entrypoint": "bash"
+    }
+  },
+  "variables": []
+}
